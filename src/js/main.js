@@ -35,7 +35,7 @@ function init() {
   const loader = new GLTFLoader();
 
   loader.load(
-    "/models/poly.gltf",
+    `${import.meta.env.BASE_URL}models/poly.gltf`,
     function (gltf) {
       gltf.scene.scale.set(10, 10, 10);
       gltf.scene.position.set(0, 21, 0);
