@@ -6,4 +6,5 @@ export default {
     open: true,
     host: true,
   },
+  base: "/walkthrough/",
 };
