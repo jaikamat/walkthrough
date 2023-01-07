@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { io } from "socket.io-client";
+
+const socket = io(":3000");
 
 let camera, scene, renderer, controls;
 
