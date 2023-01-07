@@ -1,6 +1,6 @@
 export default {
   build: {
-    outDir: "./docs",
+    outDir: "../docs",
   },
   server: {
     open: true,
