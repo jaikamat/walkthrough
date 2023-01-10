@@ -5,7 +5,7 @@ import { io } from "socket.io-client";
 
 const socket = io(":3000");
 
-let camera, scene, renderer, controls;
+let camera, scene, renderer, controls, sphere;
 
 const objects = [];
 
@@ -49,6 +49,17 @@ function init() {
       console.error(error);
     }
   );
+
+  //
+
+  const sphereGeometry = new THREE.SphereGeometry(5, 32, 16);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xfff,
+  });
+  sphere = new THREE.Mesh(sphereGeometry, material);
+  scene.add(sphere);
+
+  //
 
   scene.background = new THREE.Color(0xffffff);
   scene.fog = new THREE.Fog(0xffffff, 0, 200);
@@ -162,6 +173,18 @@ function onWindowResize() {
 
 function animate() {
   requestAnimationFrame(animate);
+
+  //
+
+  // Set the sphere's position based on the controls
+  // TODO:
+  // 1. Create a sphere at the origin when a user connects
+  // 2. Broadcast each user's position (each 100 ms) to each other user
+  // 3. Render a sphere for each user that is connected, based on the current position relative to the origin
+  sphere.position.x = -controls.getObject().position.x;
+  sphere.position.z = -controls.getObject().position.z;
+
+  //
 
   const time = performance.now();
 
