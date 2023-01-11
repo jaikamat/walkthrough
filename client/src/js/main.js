@@ -2,8 +2,15 @@ import * as THREE from "three";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { io } from "socket.io-client";
+import { v4 as uuidv4 } from "uuid";
 
 const socket = io(":3000");
+
+// Set the client's unique identifier to send to the server
+const uuid = uuidv4();
+
+// State object which holds all user's x and z locations
+let userLocations = {};
 
 let camera, scene, renderer, controls, sphere;
 
@@ -162,6 +169,21 @@ function init() {
   //
 
   window.addEventListener("resize", onWindowResize);
+
+  //
+
+  /**
+   * Initialize a listener to update user state object when server emits events
+   */
+  socket.on("locationUpdate", (value) => {
+    userLocations = { ...userLocations, ...value };
+    // Delete this client's identifier information to eliminate redundancy
+    // TODO: can this just be done server side via broadcast?
+    delete userLocations[uuid];
+    console.log("userLocations", userLocations);
+  });
+
+  //
 }
 
 function onWindowResize() {
@@ -176,13 +198,21 @@ function animate() {
 
   //
 
-  // Set the sphere's position based on the controls
-  // TODO:
-  // 1. Create a sphere at the origin when a user connects
-  // 2. Broadcast each user's position (each 100 ms) to each other user
-  // 3. Render a sphere for each user that is connected, based on the current position relative to the origin
-  sphere.position.x = -controls.getObject().position.x;
-  sphere.position.z = -controls.getObject().position.z;
+  // Set the sphere's position based on the other user's state
+
+  sphere.position.x = Object.values(userLocations)[0]?.x;
+  sphere.position.z = Object.values(userLocations)[0]?.z;
+
+  // TODO: Remove
+  console.log("entries", JSON.stringify(Object.values(userLocations)[0]));
+
+  // As the animation loops, emit the current player's location
+  socket.emit("locationUpdate", {
+    [uuid]: {
+      x: controls.getObject().position.x,
+      z: controls.getObject().position.z,
+    },
+  });
 
   //
 

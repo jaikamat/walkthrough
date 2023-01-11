@@ -13,6 +13,11 @@ const io = new Server(server, {
 
 io.on("connection", (socket) => {
   console.log("a user connected");
+
+  socket.on("locationUpdate", (value) => {
+    console.log(`update: ${JSON.stringify(value)}`);
+    io.emit("locationUpdate", value);
+  });
 });
 
 server.listen(3000, () => {
