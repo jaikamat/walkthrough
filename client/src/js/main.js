@@ -5,8 +5,7 @@ import { io } from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 
 const developmentEndpoint = ":8080";
-// TODO: protect this unnder an env var just to be extra
-const productionEndpoint = "DOMAIN_HERE";
+const productionEndpoint = import.meta.env.VITE_ENDPOINT;
 
 const socket = io(
   import.meta.env.MODE === "production"
