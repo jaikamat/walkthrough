@@ -4,7 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { io } from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 
-const developmentEndpoint = ":3000";
+const developmentEndpoint = ":8080";
 // TODO: protect this unnder an env var just to be extra
 const productionEndpoint = "DOMAIN_HERE";
 
