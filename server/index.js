@@ -6,9 +6,14 @@ const http = require("http");
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 
+const port = 8080;
+
 const io = new Server(server, {
-  // TODO: explicitly configure this for deployment domain
   cors: "*",
+});
+
+app.get("/", (req, res) => {
+  res.send("Hello World!");
 });
 
 io.on("connection", (socket) => {
@@ -20,6 +25,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(3000, () => {
-  console.log("listening on *:3000");
+server.listen(port, () => {
+  console.log(`server is listening on port ${port}`);
 });
