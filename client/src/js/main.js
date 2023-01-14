@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { io } from "socket.io-client";
-import { v4 as uuidv4 } from "uuid";
 
 const developmentEndpoint = ":8080";
 const productionEndpoint = import.meta.env.VITE_ENDPOINT;
@@ -13,11 +12,19 @@ const socket = io(
     : developmentEndpoint
 );
 
+// TODO:
+// We need to create a new sphere each time a player connects
+// On socket update: create a new sphere.
+const spheres = [];
+
 // Set the client's unique identifier to send to the server
-const uuid = uuidv4();
+// const uuid = uuidv4();
+
+let socketIdentifier;
 
 // State object which holds all user's x and z locations
 let userLocations = {};
+let connectedUsers = [];
 
 let camera, scene, renderer, controls, sphere;
 
@@ -182,12 +189,25 @@ function init() {
   /**
    * Initialize a listener to update user state object when server emits events
    */
+  socket.on("connect", () => {
+    console.log("a user has connected");
+    console.log("socketid: ", socket.id);
+    socketIdentifier = socket.id;
+  });
+
+  // Also send a list of connected UUID's?
   socket.on("locationUpdate", (value) => {
     userLocations = { ...userLocations, ...value };
     // Delete this client's identifier information to eliminate redundancy
     // TODO: can this just be done server side via broadcast?
-    delete userLocations[uuid];
-    console.log("userLocations", userLocations);
+    delete userLocations[socketIdentifier];
+    console.log(userLocations);
+  });
+
+  socket.on("connectedUsers", (value) => {
+    connectedUsers = value;
+    console.log("current socketId", socket.id);
+    console.log("connectedUsers", connectedUsers);
   });
 
   //
@@ -211,15 +231,17 @@ function animate() {
   sphere.position.z = Object.values(userLocations)[0]?.z;
 
   // TODO: Remove
-  console.log("entries", JSON.stringify(Object.values(userLocations)[0]));
+  // console.log("entries", JSON.stringify(Object.values(userLocations)[0]));
 
   // As the animation loops, emit the current player's location
-  socket.emit("locationUpdate", {
-    [uuid]: {
-      x: controls.getObject().position.x,
-      z: controls.getObject().position.z,
-    },
-  });
+  if (socketIdentifier !== undefined) {
+    socket.emit("locationUpdate", {
+      [socketIdentifier]: {
+        x: controls.getObject().position.x,
+        z: controls.getObject().position.z,
+      },
+    });
+  }
 
   //
 

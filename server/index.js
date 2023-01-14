@@ -16,12 +16,21 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
+let users = [];
+
 io.on("connection", (socket) => {
   console.log("a user connected");
+  users.push(socket.id);
 
   socket.on("locationUpdate", (value) => {
-    console.log(`update: ${JSON.stringify(value)}`);
     io.emit("locationUpdate", value);
+
+    // Send the client a list of all connected users
+    io.emit("connectedUsers", users);
+  });
+
+  socket.on("disconnect", () => {
+    users = users.filter((d) => d !== socket.id);
   });
 });
 
