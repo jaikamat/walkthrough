@@ -12,7 +12,7 @@ const socket = io(
     : developmentEndpoint
 );
 
-let socketIdentifier;
+let clientId;
 
 // State object which holds all user's x and z locations
 // let userLocations = {};
@@ -185,20 +185,20 @@ function init() {
   socket.on("connect", () => {
     console.log("a user has connected");
     console.log("socketid: ", socket.id);
-    socketIdentifier = socket.id;
+    clientId = socket.id;
 
     // TODO: create a sphere when a user connects?
   });
 
   socket.on("playerLocations", (locations) => {
     // remove the current client from the positions
-    delete locations[socketIdentifier];
+    delete locations[clientId];
     userPositions = locations;
   });
 
-  socket.on("connectedUsers", (value) => {
+  socket.on("connectedUsers", (clientIds) => {
     // Filter the client from the connected users
-    connectedUsers = value.filter((d) => d !== socketIdentifier);
+    connectedUsers = clientIds.filter((d) => d !== clientId);
   });
 
   socket.on("disconnectedUser", (value) => {
@@ -232,10 +232,10 @@ function animate() {
 
   // As the animation loops, emit the current player's location
   // If the client has not yet connected, we shouldn't emit anything
-  if (socketIdentifier !== undefined) {
+  if (clientId !== undefined) {
     socket.emit("playerLocation", {
       // [X, Y , Z] tuple
-      [socketIdentifier]: [
+      [clientId]: [
         controls.getObject().position.x,
         controls.getObject().position.y,
         controls.getObject().position.z,
