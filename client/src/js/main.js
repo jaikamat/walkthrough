@@ -15,7 +15,7 @@ const socket = io(
 // TODO:
 // We need to create a new sphere each time a player connects
 // On socket update: create a new sphere.
-const spheres = [];
+// const spheres = [];
 
 // Set the client's unique identifier to send to the server
 // const uuid = uuidv4();
@@ -205,9 +205,11 @@ function init() {
   });
 
   socket.on("connectedUsers", (value) => {
-    connectedUsers = value;
+    // Filter the client from the connected users
+    connectedUsers = value.filter((d) => d !== socket.id);
     console.log("current socketId", socket.id);
     console.log("connectedUsers", connectedUsers);
+    console.log("userLocations", userLocations);
   });
 
   //
@@ -227,8 +229,8 @@ function animate() {
 
   // Set the sphere's position based on the other user's state
 
-  sphere.position.x = Object.values(userLocations)[0]?.x;
-  sphere.position.z = Object.values(userLocations)[0]?.z;
+  sphere.position.x = userLocations[connectedUsers[0]]?.x;
+  sphere.position.z = userLocations[connectedUsers[0]]?.z;
 
   // TODO: Remove
   // console.log("entries", JSON.stringify(Object.values(userLocations)[0]));
