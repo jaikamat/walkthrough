@@ -12,19 +12,12 @@ const socket = io(
     : developmentEndpoint
 );
 
-// TODO:
-// We need to create a new sphere each time a player connects
-// On socket update: create a new sphere.
-// const spheres = [];
-
-// Set the client's unique identifier to send to the server
-// const uuid = uuidv4();
-
 let socketIdentifier;
 
 // State object which holds all user's x and z locations
-let userLocations = {};
+// let userLocations = {};
 let connectedUsers = [];
+let userPositions = {};
 
 let camera, scene, renderer, controls, sphere;
 
@@ -193,23 +186,24 @@ function init() {
     console.log("a user has connected");
     console.log("socketid: ", socket.id);
     socketIdentifier = socket.id;
+
+    // TODO: create a sphere when a user connects?
   });
 
-  // Also send a list of connected UUID's?
-  socket.on("locationUpdate", (value) => {
-    userLocations = { ...userLocations, ...value };
-    // Delete this client's identifier information to eliminate redundancy
-    // TODO: can this just be done server side via broadcast?
-    delete userLocations[socketIdentifier];
-    console.log(userLocations);
+  socket.on("playerLocations", (locations) => {
+    // remove the current client from the positions
+    delete locations[socketIdentifier];
+    userPositions = locations;
   });
 
   socket.on("connectedUsers", (value) => {
     // Filter the client from the connected users
-    connectedUsers = value.filter((d) => d !== socket.id);
-    console.log("current socketId", socket.id);
-    console.log("connectedUsers", connectedUsers);
-    console.log("userLocations", userLocations);
+    connectedUsers = value.filter((d) => d !== socketIdentifier);
+  });
+
+  socket.on("disconnectedUser", (value) => {
+    // TODO: do something here when the user disconnects
+    // delete userLocations[value];
   });
 
   //
@@ -228,20 +222,24 @@ function animate() {
   //
 
   // Set the sphere's position based on the other user's state
-
-  sphere.position.x = userLocations[connectedUsers[0]]?.x;
-  sphere.position.z = userLocations[connectedUsers[0]]?.z;
-
-  // TODO: Remove
-  // console.log("entries", JSON.stringify(Object.values(userLocations)[0]));
+  // TODO: set this for all spheres in the scene
+  // TODO: make this better, it's hard to read
+  // TODO: we need to scale this for multiple connections now
+  // TODO: the backend does this well, we just need to create spheres and add them to the scene, then retain a reference to them
+  sphere.position.x = userPositions[connectedUsers[0]]?.[0];
+  sphere.position.y = userPositions[connectedUsers[0]]?.[1];
+  sphere.position.z = userPositions[connectedUsers[0]]?.[2];
 
   // As the animation loops, emit the current player's location
+  // If the client has not yet connected, we shouldn't emit anything
   if (socketIdentifier !== undefined) {
-    socket.emit("locationUpdate", {
-      [socketIdentifier]: {
-        x: controls.getObject().position.x,
-        z: controls.getObject().position.z,
-      },
+    socket.emit("playerLocation", {
+      // [X, Y , Z] tuple
+      [socketIdentifier]: [
+        controls.getObject().position.x,
+        controls.getObject().position.y,
+        controls.getObject().position.z,
+      ],
     });
   }
 

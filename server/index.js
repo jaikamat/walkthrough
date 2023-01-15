@@ -16,21 +16,33 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-let users = [];
+let connectedUsers = [];
+let clientPositions = {};
 
 io.on("connection", (socket) => {
-  console.log("a user connected");
-  users.push(socket.id);
+  console.log(
+    `player ${socket.id} connected; there are ${io.engine.clientsCount} connected players`
+  );
+  connectedUsers.push(socket.id);
 
-  socket.on("locationUpdate", (value) => {
-    io.emit("locationUpdate", value);
+  // Spawn player at a location
+  clientPositions[socket.id] = [5, 32, 16];
 
-    // Send the client a list of all connected users
-    io.emit("connectedUsers", users);
+  // Send the client a list of all connected users
+  io.emit("connectedUsers", connectedUsers);
+
+  socket.on("playerLocation", (location) => {
+    clientPositions = { ...clientPositions, ...location };
+    io.emit("playerLocations", clientPositions);
   });
 
   socket.on("disconnect", () => {
-    users = users.filter((d) => d !== socket.id);
+    console.log(
+      `player ${socket.id} disconnected; there are ${io.engine.clientsCount} connected players`
+    );
+    delete clientPositions[socket.id];
+    io.emit("disconnectedUser", socket.id);
+    connectedUsers = connectedUsers.filter((d) => d !== socket.id);
   });
 });
 
