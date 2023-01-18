@@ -29,7 +29,7 @@ io.on("connection", (socket) => {
   clientPositions[socket.id] = [5, 32, 16];
 
   // Send the client a list of all connected users
-  io.emit("connectedUsers", connectedUsers);
+  io.emit("introduction", connectedUsers, clientPositions);
 
   socket.on("playerLocation", (location) => {
     clientPositions = { ...clientPositions, ...location };

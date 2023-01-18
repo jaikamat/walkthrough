@@ -12,14 +12,83 @@ const socket = io(
     : developmentEndpoint
 );
 
-let clientId;
+class ClientState {
+  constructor(clientId, scene) {
+    this._scene = scene;
+    this._clientId = clientId;
+    this._playerAvatars = {};
+  }
 
-// State object which holds all user's x and z locations
-// let userLocations = {};
-let connectedUsers = [];
-let userPositions = {};
+  setConnectedUsers(connectedUsers) {
+    this._connectedUsers = connectedUsers;
+  }
 
-let camera, scene, renderer, controls, sphere;
+  getConnectedUsers() {
+    return this._connectedUsers;
+  }
+
+  getClientId() {
+    return this._clientId;
+  }
+
+  createPlayerAvatar(playerId) {
+    const sphereGeometry = new THREE.SphereGeometry(5, 32, 16);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0xfff,
+    });
+    const sphere = new THREE.Mesh(sphereGeometry, material);
+    this._scene.add(sphere);
+
+    this._playerAvatars[playerId] = sphere;
+  }
+
+  createPlayerAvatars(clientPositions) {
+    // Filter out the current client from the list
+    this.getConnectedUsers()
+      .filter((id) => id !== this.getClientId())
+      .forEach((id) => {
+        this.createPlayerAvatar(id, clientPositions[id]);
+      });
+  }
+
+  movePlayerAvatar(playerId, newPosition) {
+    // TODO: Sometimes `newPosition` is undefined...I'm not sure why
+    if (newPosition === undefined) return;
+
+    const sphereMesh = this._playerAvatars[playerId];
+    const position = newPosition;
+    const [x, y, z] = position;
+
+    if (sphereMesh) {
+      sphereMesh.position.x = x;
+      sphereMesh.position.y = y;
+      sphereMesh.position.z = z;
+    }
+  }
+
+  movePlayerAvatars(positions) {
+    this.getConnectedUsers()
+      .filter((id) => id !== this.getClientId())
+      .forEach((id) => {
+        this.movePlayerAvatar(id, positions[id]);
+      });
+  }
+
+  deletePlayerAvatar(playerId) {
+    const avatar = this._playerAvatars[playerId];
+    scene.remove(avatar);
+    delete this._playerAvatars[playerId];
+  }
+
+  removePlayer(playerId) {
+    this.setConnectedUsers(
+      this.getConnectedUsers().filter((id) => id !== playerId)
+    );
+    this.deletePlayerAvatar(playerId);
+  }
+}
+
+let camera, scene, renderer, controls, clientState;
 
 const objects = [];
 
@@ -63,17 +132,6 @@ function init() {
       console.error(error);
     }
   );
-
-  //
-
-  const sphereGeometry = new THREE.SphereGeometry(5, 32, 16);
-  const material = new THREE.MeshBasicMaterial({
-    color: 0xfff,
-  });
-  sphere = new THREE.Mesh(sphereGeometry, material);
-  scene.add(sphere);
-
-  //
 
   scene.background = new THREE.Color(0xffffff);
   scene.fog = new THREE.Fog(0xffffff, 0, 200);
@@ -177,36 +235,23 @@ function init() {
 
   window.addEventListener("resize", onWindowResize);
 
-  //
-
-  /**
-   * Initialize a listener to update user state object when server emits events
-   */
   socket.on("connect", () => {
-    console.log("a user has connected");
-    console.log("socketid: ", socket.id);
-    clientId = socket.id;
-
-    // TODO: create a sphere when a user connects?
+    console.log(`user ${socket.id} has connected`);
+    clientState = new ClientState(socket.id, scene);
   });
 
   socket.on("playerLocations", (locations) => {
-    // remove the current client from the positions
-    delete locations[clientId];
-    userPositions = locations;
+    clientState.movePlayerAvatars(locations);
   });
 
-  socket.on("connectedUsers", (clientIds) => {
-    // Filter the client from the connected users
-    connectedUsers = clientIds.filter((d) => d !== clientId);
+  socket.on("introduction", (clientIds, clientPositions) => {
+    clientState.setConnectedUsers(clientIds);
+    clientState.createPlayerAvatars(clientPositions);
   });
 
-  socket.on("disconnectedUser", (value) => {
-    // TODO: do something here when the user disconnects
-    // delete userLocations[value];
+  socket.on("disconnectedUser", (id) => {
+    clientState.deletePlayerAvatar(id);
   });
-
-  //
 }
 
 function onWindowResize() {
@@ -219,23 +264,10 @@ function onWindowResize() {
 function animate() {
   requestAnimationFrame(animate);
 
-  //
-
-  // Set the sphere's position based on the other user's state
-  // TODO: set this for all spheres in the scene
-  // TODO: make this better, it's hard to read
-  // TODO: we need to scale this for multiple connections now
-  // TODO: the backend does this well, we just need to create spheres and add them to the scene, then retain a reference to them
-  sphere.position.x = userPositions[connectedUsers[0]]?.[0];
-  sphere.position.y = userPositions[connectedUsers[0]]?.[1];
-  sphere.position.z = userPositions[connectedUsers[0]]?.[2];
-
   // As the animation loops, emit the current player's location
-  // If the client has not yet connected, we shouldn't emit anything
-  if (clientId !== undefined) {
+  if (clientState !== undefined) {
     socket.emit("playerLocation", {
-      // [X, Y , Z] tuple
-      [clientId]: [
+      [clientState.getClientId()]: [
         controls.getObject().position.x,
         controls.getObject().position.y,
         controls.getObject().position.z,
