@@ -67,14 +67,6 @@ class ClientState {
     avatar.destroy();
     delete this._playerAvatars[playerId];
   }
-
-  removePlayer(playerId) {
-    const newConnectedUsers = this.getConnectedUsers().filter(
-      (id) => id !== playerId
-    );
-    this.setConnectedUsers(newConnectedUsers);
-    this.deletePlayerAvatar(playerId);
-  }
 }
 
 export default ClientState;

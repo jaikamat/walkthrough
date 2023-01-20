@@ -174,8 +174,9 @@ function init() {
     clientState.createPlayerAvatars(clientPositions);
   });
 
-  socket.on("disconnectUser", (id) => {
-    clientState.removePlayer(id);
+  socket.on("disconnectUser", (id, connectedPlayerIds) => {
+    clientState.deletePlayerAvatar(id);
+    clientState.setConnectedUsers(connectedPlayerIds);
   });
 }
 

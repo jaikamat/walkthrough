@@ -12,40 +12,76 @@ const io = new Server(server, {
   cors: "*",
 });
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
+class GameState {
+  constructor() {
+    this._connectedUsers = [];
+    this._clientPositions = {};
+  }
+
+  getConnectedUsers() {
+    return this._connectedUsers;
+  }
+
+  getClientPositions() {
+    return this._clientPositions;
+  }
+
+  addConnectedUser(id) {
+    this._connectedUsers.push(id);
+  }
+
+  spawnPlayer(id) {
+    this._clientPositions[id] = {
+      position: [0, 10, 0],
+      rotation: [0, 0, 0],
+    };
+  }
+
+  updateClientPositions(newPosition) {
+    this._clientPositions = { ...this._clientPositions, ...newPosition };
+  }
+
+  deletePlayer(socketId) {
+    delete this._clientPositions[socketId];
+    this._connectedUsers = this._connectedUsers.filter((id) => id !== socketId);
+  }
+}
+
+app.get("/", (_, res) => {
+  res.send(
+    "I am a websocket server for a personal project - please be kind :)"
+  );
 });
 
-let connectedUsers = [];
-let clientPositions = {};
+const gameState = new GameState();
 
 io.on("connection", (socket) => {
   console.log(
     `player ${socket.id} connected; there are ${io.engine.clientsCount} connected players`
   );
-  connectedUsers.push(socket.id);
 
-  // Spawn player at a location
-  clientPositions[socket.id] = {
-    position: [0, 10, 0],
-    rotation: [0, 0, 0],
-  };
+  gameState.addConnectedUser(socket.id);
+  gameState.spawnPlayer(socket.id);
 
   // Send the client a list of all connected users
-  io.emit("introduction", connectedUsers, clientPositions);
+  io.emit(
+    "introduction",
+    gameState.getConnectedUsers(),
+    gameState.getClientPositions()
+  );
 
   socket.on("move", (location) => {
-    clientPositions = { ...clientPositions, ...location };
-    io.emit("currentLocations", clientPositions);
+    gameState.updateClientPositions(location);
+    io.emit("currentLocations", gameState.getClientPositions());
   });
 
   socket.on("disconnect", () => {
     console.log(
       `player ${socket.id} disconnected; there are ${io.engine.clientsCount} connected players`
     );
-    delete clientPositions[socket.id];
-    io.emit("disconnectUser", socket.id);
-    connectedUsers = connectedUsers.filter((d) => d !== socket.id);
+
+    gameState.deletePlayer(socket.id);
+    io.emit("disconnectUser", socket.id, gameState.getConnectedUsers());
   });
 });
 
