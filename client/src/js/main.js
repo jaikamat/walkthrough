@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { io } from "socket.io-client";
+import ClientState from "./ClientState";
 
 const developmentEndpoint = ":8080";
 const productionEndpoint = import.meta.env.VITE_ENDPOINT;
@@ -11,123 +12,6 @@ const socket = io(
     ? productionEndpoint
     : developmentEndpoint
 );
-
-class Avatar {
-  constructor() {}
-
-  generateMesh() {
-    const sphereGeometry = new THREE.SphereGeometry(5, 32, 16);
-    const material = new THREE.MeshBasicMaterial({ color: 0xfff });
-    const sphere = new THREE.Mesh(sphereGeometry, material);
-
-    return sphere;
-  }
-
-  getId() {
-    return this._id;
-  }
-
-  // Side effect
-  attachToScene() {
-    scene.add(this._mesh);
-  }
-
-  // Side effect
-  removeFromScene() {
-    scene.remove(this._mesh);
-  }
-
-  init(id) {
-    this._id = id;
-    this._mesh = this.generateMesh();
-    this.attachToScene();
-  }
-
-  move(newPosition) {
-    const [x, y, z] = newPosition;
-    this._mesh.position.set(x, y, z);
-  }
-
-  destroy() {
-    this.removeFromScene();
-  }
-}
-
-class ClientState {
-  constructor(clientId, scene) {
-    this._scene = scene;
-    this._clientId = clientId;
-    this._playerAvatars = {};
-  }
-
-  setConnectedUsers(connectedUsers) {
-    this._connectedUsers = connectedUsers;
-  }
-
-  setPlayerAvatar(avatar) {
-    const id = avatar.getId();
-    this._playerAvatars[id] = avatar;
-  }
-
-  getConnectedUsers() {
-    return this._connectedUsers;
-  }
-
-  getOtherConnectedUsers() {
-    return this.getConnectedUsers().filter((id) => id !== this.getClientId());
-  }
-
-  getClientId() {
-    return this._clientId;
-  }
-
-  createPlayerAvatar(playerId) {
-    const avatar = new Avatar();
-    avatar.init(playerId);
-    this.setPlayerAvatar(avatar);
-  }
-
-  createPlayerAvatars(clientPositions) {
-    this.getOtherConnectedUsers().forEach((id) => {
-      // Only create a new avatar if the player is not part of current state
-      if (!this.getPlayerAvatar(id)) {
-        this.createPlayerAvatar(id, clientPositions[id]);
-      }
-    });
-  }
-
-  getPlayerAvatar(id) {
-    return this._playerAvatars[id];
-  }
-
-  movePlayerAvatar(playerId, newPosition) {
-    // Sometimes `avatar` is undefined...not sure why
-    const avatar = this.getPlayerAvatar(playerId);
-    if (avatar) {
-      avatar.move(newPosition);
-    }
-  }
-
-  movePlayerAvatars(positions) {
-    this.getOtherConnectedUsers().forEach((id) => {
-      this.movePlayerAvatar(id, positions[id]);
-    });
-  }
-
-  deletePlayerAvatar(playerId) {
-    const avatar = this.getPlayerAvatar(playerId);
-    avatar.destroy();
-    delete this._playerAvatars[playerId];
-  }
-
-  removePlayer(playerId) {
-    const newConnectedUsers = this.getConnectedUsers().filter(
-      (id) => id !== playerId
-    );
-    this.setConnectedUsers(newConnectedUsers);
-    this.deletePlayerAvatar(playerId);
-  }
-}
 
 let camera, scene, renderer, controls, clientState;
 
