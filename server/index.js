@@ -26,14 +26,14 @@ io.on("connection", (socket) => {
   connectedUsers.push(socket.id);
 
   // Spawn player at a location
-  clientPositions[socket.id] = [5, 32, 16];
+  clientPositions[socket.id] = [0, 10, 0];
 
   // Send the client a list of all connected users
   io.emit("introduction", connectedUsers, clientPositions);
 
-  socket.on("playerLocation", (location) => {
+  socket.on("move", (location) => {
     clientPositions = { ...clientPositions, ...location };
-    io.emit("playerLocations", clientPositions);
+    io.emit("currentLocations", clientPositions);
   });
 
   socket.on("disconnect", () => {
@@ -41,7 +41,7 @@ io.on("connection", (socket) => {
       `player ${socket.id} disconnected; there are ${io.engine.clientsCount} connected players`
     );
     delete clientPositions[socket.id];
-    io.emit("disconnectedUser", socket.id);
+    io.emit("disconnectUser", socket.id);
     connectedUsers = connectedUsers.filter((d) => d !== socket.id);
   });
 });

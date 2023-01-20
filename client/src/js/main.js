@@ -12,6 +12,47 @@ const socket = io(
     : developmentEndpoint
 );
 
+class Avatar {
+  constructor() {}
+
+  generateMesh() {
+    const sphereGeometry = new THREE.SphereGeometry(5, 32, 16);
+    const material = new THREE.MeshBasicMaterial({ color: 0xfff });
+    const sphere = new THREE.Mesh(sphereGeometry, material);
+
+    return sphere;
+  }
+
+  getId() {
+    return this._id;
+  }
+
+  // Side effect
+  attachToScene() {
+    scene.add(this._mesh);
+  }
+
+  // Side effect
+  removeFromScene() {
+    scene.remove(this._mesh);
+  }
+
+  init(id) {
+    this._id = id;
+    this._mesh = this.generateMesh();
+    this.attachToScene();
+  }
+
+  move(newPosition) {
+    const [x, y, z] = newPosition;
+    this._mesh.position.set(x, y, z);
+  }
+
+  destroy() {
+    this.removeFromScene();
+  }
+}
+
 class ClientState {
   constructor(clientId, scene) {
     this._scene = scene;
@@ -23,8 +64,17 @@ class ClientState {
     this._connectedUsers = connectedUsers;
   }
 
+  setPlayerAvatar(avatar) {
+    const id = avatar.getId();
+    this._playerAvatars[id] = avatar;
+  }
+
   getConnectedUsers() {
     return this._connectedUsers;
+  }
+
+  getOtherConnectedUsers() {
+    return this.getConnectedUsers().filter((id) => id !== this.getClientId());
   }
 
   getClientId() {
@@ -32,58 +82,49 @@ class ClientState {
   }
 
   createPlayerAvatar(playerId) {
-    const sphereGeometry = new THREE.SphereGeometry(5, 32, 16);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0xfff,
-    });
-    const sphere = new THREE.Mesh(sphereGeometry, material);
-    this._scene.add(sphere);
-
-    this._playerAvatars[playerId] = sphere;
+    const avatar = new Avatar();
+    avatar.init(playerId);
+    this.setPlayerAvatar(avatar);
   }
 
   createPlayerAvatars(clientPositions) {
-    // Filter out the current client from the list
-    this.getConnectedUsers()
-      .filter((id) => id !== this.getClientId())
-      .forEach((id) => {
+    this.getOtherConnectedUsers().forEach((id) => {
+      // Only create a new avatar if the player is not part of current state
+      if (!this.getPlayerAvatar(id)) {
         this.createPlayerAvatar(id, clientPositions[id]);
-      });
+      }
+    });
+  }
+
+  getPlayerAvatar(id) {
+    return this._playerAvatars[id];
   }
 
   movePlayerAvatar(playerId, newPosition) {
-    // TODO: Sometimes `newPosition` is undefined...I'm not sure why
-    if (newPosition === undefined) return;
-
-    const sphereMesh = this._playerAvatars[playerId];
-    const position = newPosition;
-    const [x, y, z] = position;
-
-    if (sphereMesh) {
-      sphereMesh.position.x = x;
-      sphereMesh.position.y = y;
-      sphereMesh.position.z = z;
+    // Sometimes `avatar` is undefined...not sure why
+    const avatar = this.getPlayerAvatar(playerId);
+    if (avatar) {
+      avatar.move(newPosition);
     }
   }
 
   movePlayerAvatars(positions) {
-    this.getConnectedUsers()
-      .filter((id) => id !== this.getClientId())
-      .forEach((id) => {
-        this.movePlayerAvatar(id, positions[id]);
-      });
+    this.getOtherConnectedUsers().forEach((id) => {
+      this.movePlayerAvatar(id, positions[id]);
+    });
   }
 
   deletePlayerAvatar(playerId) {
-    const avatar = this._playerAvatars[playerId];
-    scene.remove(avatar);
+    const avatar = this.getPlayerAvatar(playerId);
+    avatar.destroy();
     delete this._playerAvatars[playerId];
   }
 
   removePlayer(playerId) {
-    this.setConnectedUsers(
-      this.getConnectedUsers().filter((id) => id !== playerId)
+    const newConnectedUsers = this.getConnectedUsers().filter(
+      (id) => id !== playerId
     );
+    this.setConnectedUsers(newConnectedUsers);
     this.deletePlayerAvatar(playerId);
   }
 }
@@ -240,7 +281,7 @@ function init() {
     clientState = new ClientState(socket.id, scene);
   });
 
-  socket.on("playerLocations", (locations) => {
+  socket.on("currentLocations", (locations) => {
     clientState.movePlayerAvatars(locations);
   });
 
@@ -249,8 +290,8 @@ function init() {
     clientState.createPlayerAvatars(clientPositions);
   });
 
-  socket.on("disconnectedUser", (id) => {
-    clientState.deletePlayerAvatar(id);
+  socket.on("disconnectUser", (id) => {
+    clientState.removePlayer(id);
   });
 }
 
@@ -266,7 +307,7 @@ function animate() {
 
   // As the animation loops, emit the current player's location
   if (clientState !== undefined) {
-    socket.emit("playerLocation", {
+    socket.emit("move", {
       [clientState.getClientId()]: [
         controls.getObject().position.x,
         controls.getObject().position.y,
