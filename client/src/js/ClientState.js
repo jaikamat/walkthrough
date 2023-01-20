@@ -6,6 +6,7 @@ class ClientState {
     this._scene = scene;
     this._clientId = clientId;
     this._playerAvatars = {};
+    this._connectedUsers = [];
   }
 
   setConnectedUsers(connectedUsers) {

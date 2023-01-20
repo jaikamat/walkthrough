@@ -4,6 +4,8 @@ class Avatar {
   // Retain a reference to the threejs context
   constructor(scene) {
     this._scene = scene;
+    this._id = undefined;
+    this._mesh = undefined;
   }
 
   generateMesh() {
