@@ -48,11 +48,11 @@ class ClientState {
     return this._playerAvatars[id];
   }
 
-  movePlayerAvatar(playerId, newPosition) {
+  movePlayerAvatar(playerId, newLocation) {
     // TODO: Sometimes `avatar` is undefined...not sure why
     const avatar = this.getPlayerAvatar(playerId);
     if (avatar) {
-      avatar.move(newPosition);
+      avatar.move(newLocation);
     }
   }
 

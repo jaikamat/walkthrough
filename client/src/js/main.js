@@ -192,11 +192,18 @@ function animate() {
   // As the animation loops, emit the current player's location
   if (clientState !== undefined) {
     socket.emit("move", {
-      [clientState.getClientId()]: [
-        controls.getObject().position.x,
-        controls.getObject().position.y,
-        controls.getObject().position.z,
-      ],
+      [clientState.getClientId()]: {
+        position: [
+          controls.getObject().position.x,
+          controls.getObject().position.y,
+          controls.getObject().position.z,
+        ],
+        rotation: [
+          controls.getObject().rotation.x,
+          controls.getObject().rotation.y,
+          controls.getObject().rotation.z,
+        ],
+      },
     });
   }
 

@@ -7,9 +7,9 @@ class Avatar {
   }
 
   generateMesh() {
-    const sphereGeometry = new THREE.SphereGeometry(5, 32, 16);
-    const material = new THREE.MeshBasicMaterial({ color: 0xfff });
-    const sphere = new THREE.Mesh(sphereGeometry, material);
+    const geometry = new THREE.BoxGeometry(8, 8, 8);
+    const material = new THREE.MeshNormalMaterial();
+    const sphere = new THREE.Mesh(geometry, material);
 
     return sphere;
   }
@@ -34,9 +34,16 @@ class Avatar {
     this.attachToScene();
   }
 
-  move(newPosition) {
-    const [x, y, z] = newPosition;
+  move(newLocation) {
+    const [x, y, z] = newLocation.position;
+    const [yaw, pitch, roll] = newLocation.rotation;
     this._mesh.position.set(x, y, z);
+    this._mesh.rotation.set(yaw, pitch, roll);
+  }
+
+  rotate(newRotation) {
+    const [x, y, z] = newRotation;
+    this._mesh.rotation.set(x, y, z);
   }
 
   destroy() {

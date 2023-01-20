@@ -26,7 +26,10 @@ io.on("connection", (socket) => {
   connectedUsers.push(socket.id);
 
   // Spawn player at a location
-  clientPositions[socket.id] = [0, 10, 0];
+  clientPositions[socket.id] = {
+    position: [0, 10, 0],
+    rotation: [0, 0, 0],
+  };
 
   // Send the client a list of all connected users
   io.emit("introduction", connectedUsers, clientPositions);
