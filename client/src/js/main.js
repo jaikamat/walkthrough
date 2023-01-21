@@ -4,6 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { io } from "socket.io-client";
 import ClientState from "./ClientState";
 import { isMoving } from "./utils";
+import InputController from "./InputController";
 
 const developmentEndpoint = ":8080";
 const productionEndpoint = import.meta.env.VITE_ENDPOINT;
@@ -14,16 +15,12 @@ const socket = io(
     : developmentEndpoint
 );
 
-let camera, scene, renderer, controls, clientState;
+let camera, scene, renderer, controls, clientState, inputController;
 
-const objects = [];
+// TODO: What're these for?
+// const objects = [];
+// let raycaster;
 
-let raycaster;
-
-let moveForward = false;
-let moveBackward = false;
-let moveLeft = false;
-let moveRight = false;
 let canJump = false;
 
 let prevTime = performance.now();
@@ -34,6 +31,9 @@ init();
 animate();
 
 function init() {
+  inputController = new InputController();
+  inputController.init();
+
   camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
@@ -87,68 +87,13 @@ function init() {
 
   scene.add(controls.getObject());
 
-  const onKeyDown = (event) => {
-    switch (event.code) {
-      case "ArrowUp":
-      case "KeyW":
-        moveForward = true;
-        break;
-
-      case "ArrowLeft":
-      case "KeyA":
-        moveLeft = true;
-        break;
-
-      case "ArrowDown":
-      case "KeyS":
-        moveBackward = true;
-        break;
-
-      case "ArrowRight":
-      case "KeyD":
-        moveRight = true;
-        break;
-
-      case "Space":
-        if (canJump === true) velocity.y += 350;
-        canJump = false;
-        break;
-    }
-  };
-
-  const onKeyUp = (event) => {
-    switch (event.code) {
-      case "ArrowUp":
-      case "KeyW":
-        moveForward = false;
-        break;
-
-      case "ArrowLeft":
-      case "KeyA":
-        moveLeft = false;
-        break;
-
-      case "ArrowDown":
-      case "KeyS":
-        moveBackward = false;
-        break;
-
-      case "ArrowRight":
-      case "KeyD":
-        moveRight = false;
-        break;
-    }
-  };
-
-  document.addEventListener("keydown", onKeyDown);
-  document.addEventListener("keyup", onKeyUp);
-
-  raycaster = new THREE.Raycaster(
-    new THREE.Vector3(),
-    new THREE.Vector3(0, -1, 0),
-    0,
-    10
-  );
+  // TODO: What's ths for?
+  // raycaster = new THREE.Raycaster(
+  //   new THREE.Vector3(),
+  //   new THREE.Vector3(0, -1, 0),
+  //   0,
+  //   10
+  // );
 
   //
 
@@ -179,6 +124,24 @@ function init() {
     clientState.deletePlayerAvatar(id);
     clientState.setConnectedUsers(connectedPlayerIds);
   });
+
+  // TODO: consolidate this by setting a flag
+  controls.addEventListener("change", () => {
+    socket.emit("move", {
+      [clientState.getClientId()]: {
+        position: [
+          controls.getObject().position.x,
+          controls.getObject().position.y,
+          controls.getObject().position.z,
+        ],
+        rotation: [
+          controls.getObject().rotation.x,
+          controls.getObject().rotation.y,
+          controls.getObject().rotation.z,
+        ],
+      },
+    });
+  });
 }
 
 function onWindowResize() {
@@ -189,17 +152,19 @@ function onWindowResize() {
 }
 
 function animate() {
+  const { moveForward, moveBackward, moveLeft, moveRight, jump } =
+    inputController.getState();
+
   requestAnimationFrame(animate);
 
   const time = performance.now();
 
   if (controls.isLocked === true) {
-    raycaster.ray.origin.copy(controls.getObject().position);
-    raycaster.ray.origin.y -= 10;
-
-    const intersections = raycaster.intersectObjects(objects, false);
-
-    const onObject = intersections.length > 0;
+    // TODO: What're these lines for?
+    // raycaster.ray.origin.copy(controls.getObject().position);
+    // raycaster.ray.origin.y -= 10;
+    // const intersections = raycaster.intersectObjects(objects, false);
+    // const onObject = intersections.length > 0;
 
     const delta = (time - prevTime) / 1000;
 
@@ -215,10 +180,18 @@ function animate() {
     if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
     if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
 
-    if (onObject === true) {
-      velocity.y = Math.max(0, velocity.y);
-      canJump = true;
+    // Jump only when allowed and input pressed
+    if (canJump === true && jump) {
+      velocity.y += 350;
+      canJump = false;
     }
+
+    // TODO: We don't have object intersections yet, so this never runs
+    // TODO: What's this for?
+    // if (onObject === true) {
+    //   velocity.y = Math.max(0, velocity.y);
+    //   canJump = true;
+    // }
 
     controls.moveRight(-velocity.x * delta);
     controls.moveForward(-velocity.z * delta);
