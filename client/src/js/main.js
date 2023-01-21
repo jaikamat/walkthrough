@@ -22,25 +22,21 @@ animate();
 function init() {
   const loader = new GLTFLoader();
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    1,
-    1000
-  );
+  const aspectRatio = window.innerWidth / window.innerHeight;
+  camera = new THREE.PerspectiveCamera(75, aspectRatio, 1, 1000);
   camera.position.y = 10;
 
   firstPersonControls = new FirstPersonControls(camera, scene);
 
   loader.load(
     `${import.meta.env.BASE_URL}models/poly.gltf`,
-    function (gltf) {
+    (gltf) => {
       gltf.scene.scale.set(10, 10, 10);
       gltf.scene.position.set(0, 21, 0);
       scene.add(gltf.scene);
     },
     undefined,
-    function (error) {
+    (error) => {
       console.error(error);
     }
   );
