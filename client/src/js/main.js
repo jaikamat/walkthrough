@@ -3,6 +3,7 @@ import { PointerLockControls } from "three/examples/jsm/controls/PointerLockCont
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { io } from "socket.io-client";
 import ClientState from "./ClientState";
+import { isMoving } from "./utils";
 
 const developmentEndpoint = ":8080";
 const productionEndpoint = import.meta.env.VITE_ENDPOINT;
@@ -70,23 +71,23 @@ function init() {
   const blocker = document.getElementById("blocker");
   const instructions = document.getElementById("instructions");
 
-  instructions.addEventListener("click", function () {
+  instructions.addEventListener("click", () => {
     controls.lock();
   });
 
-  controls.addEventListener("lock", function () {
+  controls.addEventListener("lock", () => {
     instructions.style.display = "none";
     blocker.style.display = "none";
   });
 
-  controls.addEventListener("unlock", function () {
+  controls.addEventListener("unlock", () => {
     blocker.style.display = "block";
     instructions.style.display = "";
   });
 
   scene.add(controls.getObject());
 
-  const onKeyDown = function (event) {
+  const onKeyDown = (event) => {
     switch (event.code) {
       case "ArrowUp":
       case "KeyW":
@@ -115,7 +116,7 @@ function init() {
     }
   };
 
-  const onKeyUp = function (event) {
+  const onKeyUp = (event) => {
     switch (event.code) {
       case "ArrowUp":
       case "KeyW":
@@ -190,26 +191,6 @@ function onWindowResize() {
 function animate() {
   requestAnimationFrame(animate);
 
-  // As the animation loops, emit the current player's location
-  if (clientState !== undefined) {
-    socket.emit("move", {
-      [clientState.getClientId()]: {
-        position: [
-          controls.getObject().position.x,
-          controls.getObject().position.y,
-          controls.getObject().position.z,
-        ],
-        rotation: [
-          controls.getObject().rotation.x,
-          controls.getObject().rotation.y,
-          controls.getObject().rotation.z,
-        ],
-      },
-    });
-  }
-
-  //
-
   const time = performance.now();
 
   if (controls.isLocked === true) {
@@ -250,6 +231,24 @@ function animate() {
 
       canJump = true;
     }
+  }
+
+  // Only emit coordinates if the user is moving
+  if (isMoving(velocity) && clientState !== undefined) {
+    socket.emit("move", {
+      [clientState.getClientId()]: {
+        position: [
+          controls.getObject().position.x,
+          controls.getObject().position.y,
+          controls.getObject().position.z,
+        ],
+        rotation: [
+          controls.getObject().rotation.x,
+          controls.getObject().rotation.y,
+          controls.getObject().rotation.z,
+        ],
+      },
+    });
   }
 
   prevTime = time;
