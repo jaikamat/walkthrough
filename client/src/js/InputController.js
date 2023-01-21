@@ -5,6 +5,8 @@ class InputController {
     this._moveLeft = false;
     this._moveRight = false;
     this._jump = false;
+
+    this.init();
   }
 
   getState() {
